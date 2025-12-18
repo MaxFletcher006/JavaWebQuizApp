@@ -49,7 +49,6 @@ public class QuizDAO {
 
 	
 	public int addMCQ(Quiz quiz, MCQ multiple_choice_question) {
-	    // id талбарыг quiz_id болгож өөрчилсөн
 	    String sql = "INSERT INTO mc_questions (id, question, choice_1, choice_2, choice_3, choice_4, answer, point, `order`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -61,7 +60,7 @@ public class QuizDAO {
 	        stmt.setString(6, multiple_choice_question.getChoice_4());
 	        stmt.setString(7, multiple_choice_question.getAnswer());
 	        stmt.setInt(8, multiple_choice_question.getPoint());
-	        stmt.setInt(9, multiple_choice_question.getOrder()); // order нэмсэн
+	        stmt.setInt(9, multiple_choice_question.getOrder()); 	        
 	        
 	        return stmt.executeUpdate();     
 	    } 
@@ -72,7 +71,6 @@ public class QuizDAO {
 	}
 
 	public int addSAQ(Quiz quiz, SAQ short_answer_question) {
-	    // order талбарыг нэмсэн
 	    String sql = "INSERT INTO sa_questions (id, question, answer, point, `order`) VALUES (?,?,?,?,?)" ;
 	    
 	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -80,7 +78,7 @@ public class QuizDAO {
 	        stmt.setString(2, short_answer_question.getQuestion());
 	        stmt.setString(3, short_answer_question.getAnswer());
 	        stmt.setInt(4, short_answer_question.getPoint());
-	        stmt.setInt(5, short_answer_question.getOrder()); // order нэмсэн
+	        stmt.setInt(5, short_answer_question.getOrder()); 
 	        
 	        return stmt.executeUpdate();
 	    }
@@ -90,42 +88,64 @@ public class QuizDAO {
 	    }
 	}
 	
-	public int editMCQ(MCQ multiple_choice_question) {
-	    String sql = "UPDATE mc_questions SET question = ?, choice_1 = ?, choice_2 = ?, choice_3 = ?, choice_4 = ?, answer = ?, point = ? WHERE id = ?";
+	public int editMCQ(MCQ mcq) {
+	    // mcq.getId() эсвэл mcq.getID() нь quiz_id юм
+	    // mcq.getOrder() нь order юм
+	    String sql = "UPDATE mc_questions SET question = ?, choice_1 = ?, choice_2 = ?, choice_3 = ?, choice_4 = ?, answer = ?, point = ? WHERE id = ? AND `order` = ?";
 
 	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        stmt.setString(1, mcq.getQuestion());
+	        stmt.setString(2, mcq.getChoice_1());
+	        stmt.setString(3, mcq.getChoice_2());
+	        stmt.setString(4, mcq.getChoice_3());
+	        stmt.setString(5, mcq.getChoice_4());
+	        stmt.setString(6, mcq.getAnswer());
+	        stmt.setInt(7, mcq.getPoint());
+	        stmt.setInt(8, mcq.getID()); // quiz_id (table-ийн id column)
+	        stmt.setInt(9, mcq.getOrder()); // order (table-ийн order column)
 
-	        stmt.setString(1, multiple_choice_question.getQuestion());
-	        stmt.setString(2, multiple_choice_question.getChoice_1());
-	        stmt.setString(3, multiple_choice_question.getChoice_2());
-	        stmt.setString(4, multiple_choice_question.getChoice_3());
-	        stmt.setString(5, multiple_choice_question.getChoice_4());
-	        stmt.setString(6, multiple_choice_question.getAnswer());
-	        stmt.setInt(7, multiple_choice_question.getPoint());
-	        stmt.setInt(8, multiple_choice_question.getID()); 
-
-	        return stmt.executeUpdate();
+	        int rowsAffected = stmt.executeUpdate();
+	        
+	        if (rowsAffected > 0) {
+	            System.out.println("DEBUG: MCQ (quiz_id=" + mcq.getID() + ", order=" + mcq.getOrder() + ") амжилттай засварлагдлаа");
+	        } else {
+	            System.out.println("DEBUG: MCQ засварлах тохирох мөр олдсонгүй (quiz_id=" + mcq.getID() + ", order=" + mcq.getOrder() + ")");
+	        }
+	        
+	        return rowsAffected;
 
 	    } catch (SQLException e) {
 	        e.printStackTrace();
+	        System.out.println("DEBUG: MCQ засварлахад алдаа: " + e.getMessage());
 	        return 0;
 	    }
 	}
 	
-	public int editSAQ(SAQ short_answer_question) {
-	    String sql = "UPDATE sa_questions SET question = ?, answer = ?, point = ? WHERE id = ?";
+	public int editSAQ(SAQ saq) {
+	    // saq.getId() нь quiz_id юм
+	    // saq.getOrder() нь order юм
+	    String sql = "UPDATE sa_questions SET question = ?, answer = ?, point = ? WHERE id = ? AND `order` = ?";
 
 	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        stmt.setString(1, saq.getQuestion());
+	        stmt.setString(2, saq.getAnswer());
+	        stmt.setInt(3, saq.getPoint());
+	        stmt.setInt(4, saq.getId()); // quiz_id (table-ийн id column)
+	        stmt.setInt(5, saq.getOrder()); // order (table-ийн order column)
 
-	        stmt.setString(1, short_answer_question.getQuestion());
-	        stmt.setString(2, short_answer_question.getAnswer());
-	        stmt.setInt(3, short_answer_question.getPoint());
-	        stmt.setInt(4, short_answer_question.getId());
+	        int rowsAffected = stmt.executeUpdate();
+	        
+	        if (rowsAffected > 0) {
+	            System.out.println("DEBUG: SAQ (quiz_id=" + saq.getId() + ", order=" + saq.getOrder() + ") амжилттай засварлагдлаа");
+	        } else {
+	            System.out.println("DEBUG: SAQ засварлах тохирох мөр олдсонгүй (quiz_id=" + saq.getId() + ", order=" + saq.getOrder() + ")");
+	        }
+	        
+	        return rowsAffected;
 
-	        return stmt.executeUpdate();
-
-	    } catch(SQLException e) {
-	        e.printStackTrace(); 
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        System.out.println("DEBUG: SAQ засварлахад алдаа: " + e.getMessage());
 	        return 0;
 	    }
 	}
@@ -186,7 +206,6 @@ public class QuizDAO {
 	        saqStmt.setInt(1, quizId);
 	        mcqStmt.setInt(1, quizId);
 
-	        // SAQ асуултуудыг fetch хийх
 	        try (ResultSet saqResult = saqStmt.executeQuery()) {
 	            while (saqResult.next()) {
 	                SAQ saq = new SAQ(
@@ -359,8 +378,112 @@ public class QuizDAO {
 			return quizTitles ; 
 		}
 	}
+	
+	public int getMCQQuestionOrder() {
+		int question_order = 0 ;
+		
+		String sql = "SELECT COUNT(*) AS question_order FROM mc_questions" ;
+		
+		try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+			
+			ResultSet rs = stmt.executeQuery() ;
+			
+			question_order = rs.getInt("question_order") ;
+			
+		}
+		catch(SQLException e) {
+			e.printStackTrace(); 
+		}
+		
+		return question_order ; 
+	}
+	
+	public int getSAQQuestionOrder() {
+		int question_order = 0 ;
+		
+		String sql = "SELECT COUNT(*) AS question_order FROM sa_questions" ;
+		
+		try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+			
+			ResultSet rs = stmt.executeQuery() ;
+			
+			question_order = rs.getInt("question_order") ;
+			
+		}
+		catch(SQLException e) {
+			e.printStackTrace(); 
+		}
+		
+		return question_order ; 
+	}
+	
+	// QuizDAO.java class-д дараах методыг нэмэх:
+
+	public int updateQuiz(Quiz quiz) {
+	    String sql = "UPDATE quiz SET title = ?, time = ? WHERE id = ?";
+	    
+	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        
+	        stmt.setString(1, quiz.getTitle());
+	        stmt.setInt(2, quiz.getTime());
+	        stmt.setInt(3, quiz.getId());
+	        
+	        int rowsAffected = stmt.executeUpdate();
+	        
+	        if (rowsAffected > 0) {
+	            System.out.println("DEBUG: Quiz ID " + quiz.getId() + " амжилттай шинэчлэгдлээ");
+	        }
+	        
+	        return rowsAffected;
+	        
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        System.out.println("DEBUG: Quiz шинэчлэхэд алдаа гарлаа: " + e.getMessage());
+	        return 0;
+	    }
+	}
+	
+	public int deleteMCQByOrder(int quizId, int order) {
+	    String sql = "DELETE FROM mc_questions WHERE id = ? AND `order` = ?";
+	    
+	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        stmt.setInt(1, quizId);
+	        stmt.setInt(2, order);
+	        
+	        int rowsAffected = stmt.executeUpdate();
+	        System.out.println("DEBUG: MCQ (quiz_id=" + quizId + ", order=" + order + ") устгагдлаа. Rows affected: " + rowsAffected);
+	        return rowsAffected;
+	        
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        System.out.println("DEBUG: MCQ устгахад алдаа: " + e.getMessage());
+	        return 0;
+	    }
+	}
+
+	// ============ SAQ устгах - quiz_id + order ашиглана ============
+	public int deleteSAQByOrder(int quizId, int order) {
+	    String sql = "DELETE FROM sa_questions WHERE id = ? AND `order` = ?";
+	    
+	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        stmt.setInt(1, quizId);
+	        stmt.setInt(2, order);
+	        
+	        int rowsAffected = stmt.executeUpdate();
+	        System.out.println("DEBUG: SAQ (quiz_id=" + quizId + ", order=" + order + ") устгагдлаа. Rows affected: " + rowsAffected);
+	        return rowsAffected;
+	        
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        System.out.println("DEBUG: SAQ устгахад алдаа: " + e.getMessage());
+	        return 0;
+	    }
+	}
 		
 	public static void main(String[] args) {
+		
+		System.out.println("QUIZ DAO") ;
+		
 		List<Quiz> quizzes ;
 		
 		QuizDAO dao = new QuizDAO() ;
@@ -375,5 +498,11 @@ public class QuizDAO {
 		
 		dao.fetchQuizDataByTitle(dummyQuiz, "Монгол улсын түүх");
 		dao.fetchQuestions(dummyQuiz, dummyQuiz.getId()); 
+		
+		MCQ newMCQ = new MCQ(dummyQuiz.getId(),"Hi","1","2","3","4","1",1,7) ;
+		SAQ newSAQ = new SAQ(dummyQuiz.getId(), "lol","22",1,7);
+				
+		//dao.addMCQ(dummyQuiz, newMCQ) ;
+		dao.addSAQ(dummyQuiz, newSAQ) ;
 	}
 }

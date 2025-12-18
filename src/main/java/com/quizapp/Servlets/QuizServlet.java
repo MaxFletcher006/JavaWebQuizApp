@@ -27,6 +27,11 @@ public class QuizServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+        
+        // Set UTF-8 encoding for all requests
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
 
         String action = request.getParameter("action");
 
@@ -55,6 +60,11 @@ public class QuizServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+        
+        // Set UTF-8 encoding for all requests
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
 
         String action = request.getParameter("action");
 
@@ -96,7 +106,7 @@ public class QuizServlet extends HttpServlet {
         HttpSession session = request.getSession();
         String username = (String) session.getAttribute("username");
 
-        // Хэрэглэгч нэвтрээгүй бол login хуудас руу шилжүүлэх
+        // Check if user is logged in
         if (username == null || username.trim().isEmpty()) {
             response.sendRedirect("login.jsp");
             return;
@@ -107,11 +117,11 @@ public class QuizServlet extends HttpServlet {
         String timeStr = request.getParameter("time");
         String questionCountStr = request.getParameter("questionCount");
 
-        // Бүх талбаруудын validation
+        // Validate all required fields
         if (title == null || title.trim().isEmpty() ||
             user == null || user.trim().isEmpty() ||
             timeStr == null || timeStr.trim().isEmpty()) {
-            request.setAttribute("error", "Бүх талбарыг бөглөнө үү!");
+            request.setAttribute("error", "Please fill in all required fields!");
             request.getRequestDispatcher("create.jsp").forward(request, response);
             return;
         }
@@ -119,176 +129,144 @@ public class QuizServlet extends HttpServlet {
         try {
             int time = Integer.parseInt(timeStr);
 
-            // Цаг сөрөг эсвэл 0 байж болохгүй
+            // Time must be positive
             if (time <= 0) {
-                request.setAttribute("error", "Цаг эерэг тоо байх ёстой!");
+                request.setAttribute("error", "Time must be a positive number!");
                 request.getRequestDispatcher("create.jsp").forward(request, response);
                 return;
             }
 
-            // Quiz үүсгэх
+            // Create Quiz
             Quiz quiz = new Quiz(title, user, time);
             int result = quizDAO.createQuiz(quiz);
 
             if (result > 0) {
-                System.out.println("DEBUG: Quiz үүслээ. Quiz ID = " + quiz.getId());
-                
-                // Асуултуудыг нэмэх
+                System.out.println("DEBUG: Quiz created. Quiz ID = " + quiz.getId());
+
+                // Add questions
                 if (questionCountStr != null && !questionCountStr.trim().isEmpty()) {
                     int questionCount = Integer.parseInt(questionCountStr);
-                    System.out.println("DEBUG: Нийт асуултын тоо = " + questionCount);
-                    
+                    System.out.println("DEBUG: Total questions = " + questionCount);
+
                     int addedQuestions = 0;
                     List<String> errors = new ArrayList<>();
-                    
+
                     for (int i = 1; i <= questionCount; i++) {
                         String questionType = request.getParameter("questionType_" + i);
-                        
+
                         if (questionType == null) {
-                            System.out.println("DEBUG: Асуулт " + i + " - questionType null байна");
+                            System.out.println("DEBUG: Question " + i + " - questionType is null");
                             continue;
                         }
-                        
+
                         String question = request.getParameter("question_" + i);
                         String answer = request.getParameter("answer_" + i);
                         String pointStr = request.getParameter("point_" + i);
-                        
-                        // Параметрүүдийн validation
+
+                        // Validation
                         if (question == null || question.trim().isEmpty()) {
-                            errors.add("Асуулт " + i + " - Асуулт хоосон байна");
-                            System.out.println("DEBUG: Асуулт " + i + " - question хоосон байна");
+                            errors.add("Question " + i + " - Question is empty");
                             continue;
                         }
-                        
+
                         if (answer == null || answer.trim().isEmpty()) {
-                            errors.add("Асуулт " + i + " - Хариулт хоосон байна");
-                            System.out.println("DEBUG: Асуулт " + i + " - answer хоосон байна");
+                            errors.add("Question " + i + " - Answer is empty");
                             continue;
                         }
-                        
+
                         if (pointStr == null || pointStr.trim().isEmpty()) {
-                            errors.add("Асуулт " + i + " - Оноо хоосон байна");
-                            System.out.println("DEBUG: Асуулт " + i + " - point хоосон байна");
+                            errors.add("Question " + i + " - Point is empty");
                             continue;
                         }
-                        
+
                         int point;
                         try {
                             point = Integer.parseInt(pointStr);
                             if (point <= 0) {
-                                errors.add("Асуулт " + i + " - Оноо эерэг тоо байх ёстой");
+                                errors.add("Question " + i + " - Point must be positive");
                                 continue;
                             }
                         } catch (NumberFormatException e) {
-                            errors.add("Асуулт " + i + " - Оноо буруу форматтай");
+                            errors.add("Question " + i + " - Invalid point format");
                             continue;
                         }
-                        
-                        if ("mcq".equals(questionType)) {
-                            // MCQ асуулт нэмэх
+
+                        if ("mcq".equalsIgnoreCase(questionType)) {
+                            // Add MCQ question
                             String choice1 = request.getParameter("choice1_" + i);
                             String choice2 = request.getParameter("choice2_" + i);
                             String choice3 = request.getParameter("choice3_" + i);
                             String choice4 = request.getParameter("choice4_" + i);
-                            
-                            // Сонголтуудын validation
+
                             if (choice1 == null || choice1.trim().isEmpty() ||
                                 choice2 == null || choice2.trim().isEmpty() ||
                                 choice3 == null || choice3.trim().isEmpty() ||
                                 choice4 == null || choice4.trim().isEmpty()) {
-                                
-                                errors.add("Асуулт " + i + " - Бүх сонголтуудыг бөглөнө үү");
-                                System.out.println("DEBUG: MCQ " + i + " - Сонголтууд дутуу байна");
+                                errors.add("Question " + i + " - Please fill in all choices");
                                 continue;
                             }
-                            
-                            try {
-                                // MCQ object үүсгэх - quiz_id, question, choices, answer, point, order
-                                MCQ mcq = new MCQ(quiz.getId(), question, choice1, 
-                                                choice2, choice3, choice4, 
-                                                answer, point, i);
-                                
-                                int mcqResult = quizDAO.addMCQ(quiz, mcq);
-                                
-                                if (mcqResult > 0) {
-                                    addedQuestions++;
-                                    System.out.println("DEBUG: MCQ " + i + " амжилттай нэмэгдлээ. Result = " + mcqResult);
-                                } else {
-                                    errors.add("Асуулт " + i + " - Database-д нэмэхэд алдаа гарлаа");
-                                    System.out.println("DEBUG: MCQ " + i + " - Нэмэхэд алдаа гарлаа. Result = " + mcqResult);
-                                }
-                                
-                            } catch (Exception e) {
-                                errors.add("Асуулт " + i + " - Үүсгэхэд алдаа: " + e.getMessage());
-                                System.out.println("DEBUG: MCQ " + i + " - Exception: " + e.getMessage());
-                                e.printStackTrace();
+
+                            MCQ mcq = new MCQ(
+                                quiz.getId(), question,
+                                choice1, choice2, choice3, choice4,
+                                answer, point, i
+                            );
+
+                            int mcqResult = quizDAO.addMCQ(quiz, mcq);
+                            if (mcqResult > 0) {
+                                addedQuestions++;
+                                System.out.println("DEBUG: MCQ " + i + " added successfully");
+                            } else {
+                                errors.add("Question " + i + " - Database error");
                             }
-                        } 
-                        else if ("saq".equals(questionType)) {
-                            // SAQ асуулт нэмэх
-                            try {
-                                // SAQ object үүсгэх - quiz_id, question, answer, point, order
-                                SAQ saq = new SAQ(quiz.getId(), question, answer, point, i);
-                                
-                                int saqResult = quizDAO.addSAQ(quiz, saq);
-                                
-                                if (saqResult > 0) {
-                                    addedQuestions++;
-                                    System.out.println("DEBUG: SAQ " + i + " амжилттай нэмэгдлээ. Result = " + saqResult);
-                                } else {
-                                    errors.add("Асуулт " + i + " - Database-д нэмэхэд алдаа гарлаа");
-                                    System.out.println("DEBUG: SAQ " + i + " - Нэмэхэд алдаа гарлаа. Result = " + saqResult);
-                                }
-                                
-                            } catch (Exception e) {
-                                errors.add("Асуулт " + i + " - Үүсгэхэд алдаа: " + e.getMessage());
-                                System.out.println("DEBUG: SAQ " + i + " - Exception: " + e.getMessage());
-                                e.printStackTrace();
+
+                        } else if ("saq".equalsIgnoreCase(questionType)) {
+                            // Add SAQ question
+                            SAQ saq = new SAQ(quiz.getId(), question, answer, point, i);
+                            int saqResult = quizDAO.addSAQ(quiz, saq);
+                            if (saqResult > 0) {
+                                addedQuestions++;
+                                System.out.println("DEBUG: SAQ " + i + " added successfully");
+                            } else {
+                                errors.add("Question " + i + " - Database error");
                             }
+
                         } else {
-                            errors.add("Асуулт " + i + " - Асуултын төрөл тодорхойгүй: " + questionType);
-                            System.out.println("DEBUG: Асуулт " + i + " - Тодорхойгүй төрөл: " + questionType);
+                            errors.add("Question " + i + " - Unknown question type: " + questionType);
                         }
                     }
-                    
-                    System.out.println("DEBUG: Нийт " + addedQuestions + " асуулт амжилттай нэмэгдлээ");
-                    
-                    // Алдаануудыг харуулах
+
+                    System.out.println("DEBUG: Total " + addedQuestions + " questions added");
+
                     if (!errors.isEmpty()) {
-                        System.out.println("DEBUG: ========== АЛДААНУУД ==========");
-                        for (String error : errors) {
-                            System.out.println("DEBUG: " + error);
-                        }
-                        System.out.println("DEBUG: ================================");
-                        
-                        // Хэрэв ямар нэг асуулт нэмэгдсэн бол warning, үгүй бол error
                         if (addedQuestions > 0) {
-                            request.setAttribute("warning", "Quiz үүслээ гэхдээ зарим асуултууд нэмэгдсэнгүй. Дэлгэрэнгүй: " + String.join(", ", errors));
+                            request.setAttribute("warning", 
+                                "Quiz created but some questions failed: " + String.join(", ", errors));
                         } else {
-                            request.setAttribute("error", "Quiz үүслээ гэхдээ ямар ч асуулт нэмэгдсэнгүй! Дэлгэрэнгүй: " + String.join(", ", errors));
+                            request.setAttribute("error", 
+                                "Quiz created but no questions added: " + String.join(", ", errors));
                         }
                     }
-                    
+
                 } else {
-                    System.out.println("DEBUG: questionCount параметр байхгүй эсвэл хоосон байна");
-                    request.setAttribute("warning", "Quiz үүслээ гэхдээ асуулт нэмэгдсэнгүй!");
+                    request.setAttribute("warning", "Quiz created but no questions added!");
                 }
-                                
-                request.setAttribute("message", quiz.getTitle() + " created successfully");
-                request.getRequestDispatcher("main.jsp").forward(request, response); 
-                
+
+                request.setAttribute("message", quiz.getTitle() + " created successfully!");
+                request.getRequestDispatcher("main.jsp").forward(request, response);
+
             } else {
-                request.setAttribute("error", "Quiz үүсгэхэд алдаа гарлаа! Database-д хадгалагдсангүй.");
+                request.setAttribute("error", "Failed to create quiz. Database error.");
                 request.getRequestDispatcher("error.jsp").forward(request, response);
             }
-            
+
         } catch (NumberFormatException e) {
             e.printStackTrace();
-            request.setAttribute("error", "Тоон утгуудыг зөв оруулна уу! (" + e.getMessage() + ")");
+            request.setAttribute("error", "Invalid number format: " + e.getMessage());
             request.getRequestDispatcher("create.jsp").forward(request, response);
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Алдаа гарлаа: " + e.getMessage());
+            request.setAttribute("error", "Error occurred: " + e.getMessage());
             request.getRequestDispatcher("create.jsp").forward(request, response);
         }
     }
@@ -360,7 +338,7 @@ public class QuizServlet extends HttpServlet {
         String questionCountStr = request.getParameter("questionCount");
 
         if (quizIdStr == null || questionCountStr == null) {
-            request.setAttribute("message", "Error occured");
+            request.setAttribute("message", "Error occurred");
             request.getRequestDispatcher("main.jsp").forward(request, response);
             return;
         }
@@ -369,39 +347,83 @@ public class QuizServlet extends HttpServlet {
             int quizId = Integer.parseInt(quizIdStr);
             int questionCount = Integer.parseInt(questionCountStr);
             
-            System.out.println("DEBUG: Quiz засварлаж байна. Quiz ID = " + quizId);
-            System.out.println("DEBUG: Нийт асуултын тоо = " + questionCount);
+            System.out.println("DEBUG: Updating quiz. Quiz ID = " + quizId);
+            System.out.println("DEBUG: Total questions = " + questionCount);
 
             int updatedCount = 0;
             int addedCount = 0;
+            int deletedCount = 0;
             List<String> errors = new ArrayList<>();
 
             for (int i = 1; i <= questionCount; i++) {
-                // Асуулт устгагдсан эсэхийг шалгах - form-оос ирээгүй бол skip
                 String questionType = request.getParameter("questionType_" + i);
+                String isExisting = request.getParameter("isExisting_" + i);
+                String isDeleted = request.getParameter("deletedQuestion_" + i);
+                
+                System.out.println("DEBUG: ===== Question " + i + " =====");
+                System.out.println("DEBUG: questionType = " + questionType);
+                System.out.println("DEBUG: isExisting = " + isExisting);
+                System.out.println("DEBUG: isDeleted = " + isDeleted);
+                
+                // Check if question is deleted
+                if ("true".equals(isDeleted)) {
+                    System.out.println("DEBUG: Question " + i + " is marked for deletion");
+                    
+                    String questionIdStr = request.getParameter("questionId_" + i);
+                    String questionOrderStr = request.getParameter("questionOrder_" + i);
+                    questionType = request.getParameter("questionType_" + i);
+                    
+                    if (questionIdStr != null && !questionIdStr.trim().isEmpty() && 
+                        questionOrderStr != null && !questionOrderStr.trim().isEmpty() &&
+                        questionType != null && !questionType.trim().isEmpty()) {
+                        
+                        try {
+                            int questionQuizId = Integer.parseInt(questionIdStr);
+                            int questionOrder = Integer.parseInt(questionOrderStr);
+                            
+                            if ("mcq".equals(questionType)) {
+                                quizDAO.deleteMCQByOrder(questionQuizId, questionOrder);
+                                deletedCount++;
+                                System.out.println("DEBUG: MCQ question deleted (quiz_id=" + questionQuizId + ", order=" + questionOrder + ")");
+                            } else if ("saq".equals(questionType)) {
+                                quizDAO.deleteSAQByOrder(questionQuizId, questionOrder);
+                                deletedCount++;
+                                System.out.println("DEBUG: SAQ question deleted (quiz_id=" + questionQuizId + ", order=" + questionOrder + ")");
+                            }
+                        } catch (Exception e) {
+                            errors.add("Question " + i + " deletion failed: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                    continue;
+                }
+                
+                questionType = request.getParameter("questionType_" + i);
                 if (questionType == null || questionType.trim().isEmpty()) {
-                    System.out.println("DEBUG: Асуулт " + i + " устгагдсан буюу хоосон байна");
+                    System.out.println("DEBUG: Question " + i + " - questionType is empty, skipping");
                     continue;
                 }
 
                 String question = request.getParameter("question_" + i);
                 String answer = request.getParameter("answer_" + i);
                 String pointStr = request.getParameter("point_" + i);
-                String isExisting = request.getParameter("isExisting_" + i);
+                isExisting = request.getParameter("isExisting_" + i);
+                
+                System.out.println("DEBUG: Question " + i + " - question = " + (question != null ? question.substring(0, Math.min(20, question.length())) + "..." : "null"));
 
                 // Validation
                 if (question == null || question.trim().isEmpty()) {
-                    errors.add("Асуулт " + i + " - Question is empty");
+                    errors.add("Question " + i + " - Question is empty");
                     continue;
                 }
 
                 if (answer == null || answer.trim().isEmpty()) {
-                    errors.add("Асуулт " + i + " - Answer is empty");
+                    errors.add("Question " + i + " - Answer is empty");
                     continue;
                 }
 
                 if (pointStr == null || pointStr.trim().isEmpty()) {
-                    errors.add("Асуулт " + i + " - Point is empty");
+                    errors.add("Question " + i + " - Point is empty");
                     continue;
                 }
 
@@ -409,16 +431,15 @@ public class QuizServlet extends HttpServlet {
                 try {
                     point = Integer.parseInt(pointStr);
                     if (point <= 0) {
-                        errors.add("Question " + i + " - Point can't be negative number");
+                        errors.add("Question " + i + " - Point can't be negative");
                         continue;
                     }
                 } catch (NumberFormatException e) {
-                    errors.add("Question " + i + " - Wrong formatted");
+                    errors.add("Question " + i + " - Wrong format");
                     continue;
                 }
 
                 if ("mcq".equals(questionType)) {
-                    // MCQ асуулт
                     String choice1 = request.getParameter("choice1_" + i);
                     String choice2 = request.getParameter("choice2_" + i);
                     String choice3 = request.getParameter("choice3_" + i);
@@ -429,33 +450,41 @@ public class QuizServlet extends HttpServlet {
                         choice3 == null || choice3.trim().isEmpty() ||
                         choice4 == null || choice4.trim().isEmpty()) {
                         
-                        errors.add("Асуулт " + i + " - Бүх сонголтуудыг бөглөнө үү");
+                        errors.add("Question " + i + " - Please fill in all choices");
                         continue;
                     }
 
                     try {
                         if ("true".equals(isExisting)) {
-                            // Одоо байгаа асуултыг засварлах
                             String questionIdStr = request.getParameter("questionId_" + i);
                             if (questionIdStr != null && !questionIdStr.trim().isEmpty()) {
-                                int questionId = Integer.parseInt(questionIdStr);
+                                int questionQuizId = Integer.parseInt(questionIdStr);
                                 
-                                // MCQ constructor ашиглан үүсгэх
-                                MCQ mcq = new MCQ(questionId, question, choice1, choice2, 
+                                MCQ mcq = new MCQ(questionQuizId, question, choice1, choice2, 
                                                 choice3, choice4, answer, point, i);
 
                                 int result = quizDAO.editMCQ(mcq);
                                 if (result > 0) {
                                     updatedCount++;
-                                    System.out.println("DEBUG: MCQ " + i + " амжилттай засварлагдлаа");
+                                    System.out.println("DEBUG: MCQ " + i + " updated successfully (quiz_id=" + questionQuizId + ", order=" + i + ")");
                                 } else {
-                                    errors.add("Асуулт " + i + " - Засварлахад алдаа гарлаа");
+                                    errors.add("Question " + i + " - Update failed");
                                 }
                             }
                         } else {
-                            // Шинэ асуулт нэмэх - quiz_id дамжуулах хэрэггүй, constructor-д байна
+                            String newOrderStr = request.getParameter("newQuestionOrder_" + i);
+                            int newOrder = i;
+                            if (newOrderStr != null && !newOrderStr.trim().isEmpty()) {
+                                try {
+                                    newOrder = Integer.parseInt(newOrderStr);
+                                    System.out.println("DEBUG: New question order = " + newOrder);
+                                } catch (NumberFormatException e) {
+                                    System.out.println("DEBUG: newQuestionOrder parse failed, using default " + i);
+                                }
+                            }
+                            
                             MCQ mcq = new MCQ(quizId, question, choice1, choice2, 
-                                            choice3, choice4, answer, point, i);
+                                            choice3, choice4, answer, point, newOrder);
                             
                             Quiz quiz = new Quiz();
                             quiz.setId(quizId);
@@ -463,83 +492,80 @@ public class QuizServlet extends HttpServlet {
                             int result = quizDAO.addMCQ(quiz, mcq);
                             if (result > 0) {
                                 addedCount++;
-                                System.out.println("DEBUG: Шинэ MCQ " + i + " амжилттай нэмэгдлээ");
+                                System.out.println("DEBUG: New MCQ " + i + " added successfully (quiz_id=" + quizId + ", order=" + newOrder + ")");
                             } else {
-                                errors.add("Асуулт " + i + " - Нэмэхэд алдаа гарлаа");
+                                errors.add("Question " + i + " - Failed to add");
                             }
                         }
                     } catch (Exception e) {
-                        errors.add("Асуулт " + i + " - " + e.getMessage());
+                        errors.add("Question " + i + " - " + e.getMessage());
                         e.printStackTrace();
                     }
 
                 } else if ("saq".equals(questionType)) {
-                    // SAQ асуулт
                     try {
                         if ("true".equals(isExisting)) {
-                            // Одоо байгаа асуултыг засварлах
                             String questionIdStr = request.getParameter("questionId_" + i);
                             if (questionIdStr != null && !questionIdStr.trim().isEmpty()) {
-                                int questionId = Integer.parseInt(questionIdStr);
+                                int questionQuizId = Integer.parseInt(questionIdStr);
                                 
-                                // SAQ constructor ашиглан үүсгэх
-                                SAQ saq = new SAQ(questionId, question, answer, point, i);
+                                SAQ saq = new SAQ(questionQuizId, question, answer, point, i);
 
                                 int result = quizDAO.editSAQ(saq);
                                 if (result > 0) {
                                     updatedCount++;
-                                    System.out.println("DEBUG: SAQ " + i + " амжилттай засварлагдлаа");
+                                    System.out.println("DEBUG: SAQ " + i + " updated successfully (quiz_id=" + questionQuizId + ", order=" + i + ")");
                                 } else {
-                                    errors.add("Асуулт " + i + " - Засварлахад алдаа гарлаа");
+                                    errors.add("Question " + i + " - Update failed");
                                 }
                             }
                         } else {
-                            // Шинэ асуулт нэмэх
+                            SAQ saq = new SAQ(quizId, question, answer, point, i);
+                            
                             Quiz quiz = new Quiz();
                             quiz.setId(quizId);
-                            
-                            SAQ saq = new SAQ(quizId, question, answer, point, i);
 
                             int result = quizDAO.addSAQ(quiz, saq);
                             if (result > 0) {
                                 addedCount++;
-                                System.out.println("DEBUG: Шинэ SAQ " + i + " амжилттай нэмэгдлээ");
+                                System.out.println("DEBUG: New SAQ " + i + " added successfully");
                             } else {
-                                errors.add("Асуулт " + i + " - Нэмэхэд алдаа гарлаа");
+                                errors.add("Question " + i + " - Failed to add");
                             }
                         }
                     } catch (Exception e) {
-                        errors.add("Асуулт " + i + " - " + e.getMessage());
+                        errors.add("Question " + i + " - " + e.getMessage());
                         e.printStackTrace();
                     }
                 }
             }
 
-            // Үр дүнг харуулах
-            System.out.println("DEBUG: Засварласан асуулт: " + updatedCount);
-            System.out.println("DEBUG: Нэмсэн асуулт: " + addedCount);
+            System.out.println("DEBUG: Updated questions: " + updatedCount);
+            System.out.println("DEBUG: Added questions: " + addedCount);
+            System.out.println("DEBUG: Deleted questions: " + deletedCount);
 
             if (!errors.isEmpty()) {
-                System.out.println("DEBUG: ========== АЛДААНУУД ==========");
+                System.out.println("DEBUG: ========== ERRORS ==========");
                 for (String error : errors) {
                     System.out.println("DEBUG: " + error);
                 }
                 
                 if (updatedCount > 0 || addedCount > 0) {
-                    request.setAttribute("warning", 
-                        "Зарим өөрчлөлт хадгалагдлаа. " + 
-                        "Засварласан: " + updatedCount + ", " +
-                        "Нэмсэн: " + addedCount + ". " +
-                        "Алдаа: " + String.join(", ", errors));
+                    String msg = "Some changes saved. ";
+                    if (updatedCount > 0) msg += "Updated: " + updatedCount + " ";
+                    if (addedCount > 0) msg += "Added: " + addedCount + " ";
+                    if (deletedCount > 0) msg += "Deleted: " + deletedCount + " ";
+                    msg += "Errors: " + String.join(", ", errors);
+                    request.setAttribute("warning", msg);
                 } else {
                     request.setAttribute("error", 
-                        "Ямар ч өөрчлөлт хадгалагдсангүй! " +
-                        "Алдаа: " + String.join(", ", errors));
+                        "No changes saved! Errors: " + String.join(", ", errors));
                 }
             } else {
-                String message = quizTitle + " амжилттай шинэчлэгдлээ! ";
-                if (updatedCount > 0) message += "Засварласан: " + updatedCount + " ";
-                if (addedCount > 0) message += "Нэмсэн: " + addedCount;
+                String message = quizTitle + " updated successfully! ";
+                if (updatedCount > 0) message += "Updated: " + updatedCount + " ";
+                if (addedCount > 0) message += "Added: " + addedCount + " ";
+                if (deletedCount > 0) message += "Deleted: " + deletedCount;
                 
                 request.setAttribute("message", message);
             }
@@ -548,11 +574,11 @@ public class QuizServlet extends HttpServlet {
 
         } catch (NumberFormatException e) {
             e.printStackTrace();
-            request.setAttribute("error", "Тоон утгууд буруу байна: " + e.getMessage());
+            request.setAttribute("error", "Invalid number format: " + e.getMessage());
             request.getRequestDispatcher("edit.jsp?title=" + quizTitle).forward(request, response);
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Алдаа гарлаа: " + e.getMessage());
+            request.setAttribute("error", "Error occurred: " + e.getMessage());
             request.getRequestDispatcher("edit.jsp?title=" + quizTitle).forward(request, response);
         }
     }
@@ -572,7 +598,6 @@ public class QuizServlet extends HttpServlet {
     private void deleteResult(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Form-аас ирсэн parameter-уудыг авах
         String quizIdStr = request.getParameter("quizId");
         String username = request.getParameter("username");
 
@@ -620,25 +645,25 @@ public class QuizServlet extends HttpServlet {
     private void deleteQuiz(HttpServletRequest request, HttpServletResponse response) 
     	throws ServletException, IOException {
     	
-    	Quiz removedQuiz = new Quiz() ;
-    	QuizDAO quizDAO = new QuizDAO() ;
-    	AnswerDAO answerDAO = new AnswerDAO() ;
-    	ResultDAO resultDAO = new ResultDAO() ;
+    	Quiz removedQuiz = new Quiz();
+    	QuizDAO quizDAO = new QuizDAO();
+    	AnswerDAO answerDAO = new AnswerDAO();
+    	ResultDAO resultDAO = new ResultDAO();
     	
-    	String title = (String) request.getParameter("title") ;
+    	String title = (String) request.getParameter("title");
     	
-    	System.out.println(title) ;
+    	System.out.println(title);
     	
     	quizDAO.fetchQuizDataByTitle(removedQuiz, title);
     	quizDAO.fetchQuestions(removedQuiz, removedQuiz.getId()); 
     	
     	if(quizDAO.deleteQuiz(removedQuiz) > 0) {
-        	request.setAttribute("message", title + " deleted sucessfully");
+        	request.setAttribute("message", title + " deleted successfully");
 	    	answerDAO.deleteAnswer(title, removedQuiz.getId());
 	    	resultDAO.deleteResult(removedQuiz.getId(), removedQuiz.getUser());
     	}
     	else 
-    		request.setAttribute("message", "Trouble occured. Please try again");
+    		request.setAttribute("message", "Trouble occurred. Please try again");
     	
     	request.getRequestDispatcher("main.jsp").forward(request, response); 
      }

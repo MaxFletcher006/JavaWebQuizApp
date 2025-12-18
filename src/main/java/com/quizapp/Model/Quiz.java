@@ -89,6 +89,16 @@ public class Quiz {
         return sum;
     }
     
+    public List<Integer> getQuestionOrders() {
+    	List<Integer> question_orders = new ArrayList<>() ;
+    	
+    	for(Question questions: this.questions) {
+    		question_orders.add(questions.getOrder());
+    	}
+    	
+    	return question_orders ; 
+    }
+    
     public void printTotalPoints() {
     	System.out.println(this.totalPoints);
     }
@@ -125,6 +135,15 @@ public class Quiz {
 //        	System.out.println(answers);       
 //        }
         
-        System.out.println(quiz.calculateScore(userAnswers));
+        //System.out.println(quiz.calculateScore(userAnswers));
+        
+        System.out.println(dao.getMCQQuestionOrder()) ;
+        System.out.println(dao.getSAQQuestionOrder()) ;
+        
+        for(Integer id: quiz.getQuestionOrders()) {
+        	System.out.println("id: " + id) ;
+        }
+        
+        quiz.printQuestions(); 
     }
 }

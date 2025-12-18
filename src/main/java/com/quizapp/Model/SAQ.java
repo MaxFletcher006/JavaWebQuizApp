@@ -34,10 +34,6 @@ public class SAQ extends Question {
         super.setPoint(point);
     }
     
-    public int getOrder() {
-    	return super.getOrder() ;
-    }
-    
     @Override
     public String toString() {
         return "Question: " + getQuestion() + "\n"

@@ -6,6 +6,7 @@ public abstract class Question implements Comparable<Question> {
 	private String answer = null ; 
 	private int point = 0 ; 
 	private int order = 1 ; 
+	private int question_id = 0 ;
 	
 	public Question(int id, String question, String answer, int point, int order) {
 		this.id = id ; 
